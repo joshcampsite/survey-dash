@@ -66,4 +66,4 @@ jobs:
 
     - name: Show Cloud Run Service URL
       if: steps.deploy.outputs.url # Only run if deployment succeeded and URL is available
-      run: echo "Deployed successfully to: ${{ steps.deploy.outputs.url }}"
+      run: echo "Deployed successfully to:${{ steps.deploy.outputs.url }}"
