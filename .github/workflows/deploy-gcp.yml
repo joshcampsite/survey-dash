@@ -1,0 +1,69 @@
+# .github/workflows/deploy-gcp.yml
+
+name: Deploy Dash App to Cloud Run via WIF
+
+on:
+  push:
+    branches:
+      - main # Or your default branch
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  CLOUD_RUN_SERVICE_NAME: ${{ secrets.CLOUD_RUN_SERVICE_NAME }}
+  ARTIFACT_REGISTRY_REPO: ${{ secrets.ARTIFACT_REGISTRY_REPO }}
+  # Full image path: <region>-docker.pkg.dev/<project-id>/<repo-name>/<service-name>
+  IMAGE_PATH: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REGISTRY_REPO }}/${{ secrets.CLOUD_RUN_SERVICE_NAME }}
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    # Add permissions required by google-github-actions/auth using WIF
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for OIDC token generation
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud (WIF)
+      id: 'auth'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        workload_identity_provider: '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}' # From GitHub Secrets
+        service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}' # From GitHub Secrets
+
+    - name: Set up Cloud SDK
+      uses: 'google-github-actions/setup-gcloud@v2'
+
+    - name: Configure Docker to use gcloud credential helper
+      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+    - name: Build Docker image
+      run: docker build -t ${{ env.IMAGE_PATH }}:${{ github.sha }} -t ${{ env.IMAGE_PATH }}:latest .
+      # Ensure your Dockerfile and dashboard.py are in the root or adjust path
+
+    - name: Push Docker image to Artifact Registry
+      run: docker push ${{ env.IMAGE_PATH }} --all-tags # Pushes both sha and latest tags
+
+    - name: Deploy to Cloud Run
+      id: deploy
+      uses: 'google-github-actions/deploy-cloudrun@v2'
+      with:
+        service: ${{ env.CLOUD_RUN_SERVICE_NAME }}
+        region: ${{ env.GCP_REGION }}
+        # Deploy the specific image tagged with the commit SHA
+        image: ${{ env.IMAGE_PATH }}:${{ github.sha }}
+        # --- Optional Flags ---
+        # Allow public access (remove if you need authentication)
+        flags: '--allow-unauthenticated'
+        # Example: Set environment variables for your Dash app if needed
+        # env_vars: |
+        #   DB_HOST=1.2.3.4
+        #   API_KEY=some_secret_value # (Better to use GCP Secret Manager for secrets)
+
+    - name: Show Cloud Run Service URL
+      if: steps.deploy.outputs.url # Only run if deployment succeeded and URL is available
+      run: echo "Deployed successfully to: ${{ steps.deploy.outputs.url }}"
