@@ -1,0 +1,8 @@
+# requirements.txt
+dash
+dash-bootstrap-components
+pandas
+plotly
+numpy
+gunicorn # Add gunicorn for production
+# Add any other libraries you import
