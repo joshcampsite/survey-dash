@@ -40,7 +40,16 @@ jobs:
 
     - name: Configure Docker to use gcloud credential helper
       run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
-
+      
+    - name: Check Docker Config via gcloud print-settings
+      run: |
+        echo "--- Checking Docker settings for Artifact Registry ---"
+        gcloud artifacts print-settings docker \
+          --repository=${{ env.ARTIFACT_REGISTRY_REPO }} \
+          --location=${{ env.GCP_REGION }} \
+          --project=${{ env.GCP_PROJECT_ID }}
+        echo "----------------------------------------------------"
+        
     - name: Build Docker image
       run: docker build -t ${{ env.IMAGE_PATH }}:${{ github.sha }} -t ${{ env.IMAGE_PATH }}:latest .
       # Ensure your Dockerfile and dashboard.py are in the root or adjust path
