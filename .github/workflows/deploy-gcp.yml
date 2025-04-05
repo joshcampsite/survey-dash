@@ -70,7 +70,7 @@ jobs:
         # Deploy the specific image tag that was just pushed
         image: ${{ env.IMAGE_PATH }}:${{ github.sha }}
         # Allow unauthenticated access (remove flags if authentication is needed)
-        flags: '--allow-unauthenticated'
+        flags: '--allow-unauthenticated --service-account=${{ secrets.GCP_SERVICE_ACCOUNT }}'
 
     # Step 7: Output the Cloud Run service URL
     - name: Show Cloud Run Service URL
