@@ -38,6 +38,9 @@ jobs:
     - name: Set up Cloud SDK
       uses: 'google-github-actions/setup-gcloud@v2'
 
+    - name: Login to GCO
+      run: gcloud auth login
+
     - name: Configure Docker to use gcloud credential helper
       run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
       
