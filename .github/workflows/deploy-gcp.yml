@@ -19,7 +19,6 @@ jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
-    # Add permissions required by google-github-actions/auth using WIF
     permissions:
       contents: 'read'
       id-token: 'write' # Required for OIDC token generation
@@ -28,33 +27,38 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # --- Modified Auth Step ---
+    # Kept v2, but added token_format to output an access_token
     - name: Authenticate to Google Cloud (WIF)
-      id: 'auth'
+      id: 'auth' # We need the id to reference outputs
       uses: 'google-github-actions/auth@v2'
       with:
-        workload_identity_provider: '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}' # From GitHub Secrets
-        service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}' # From GitHub Secrets
+        workload_identity_provider: '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
+        service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
+        token_format: 'access_token' # Request an access token output
+
+    # --- Added Docker Login Step ---
+    # Uses the access token from the previous step to explicitly login
+    - name: Login to Google Artifact Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.GCP_REGION }}-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }} # Use the output token
+
+    # --- Removed gcloud auth configure-docker step ---
+    # --- Removed cat ~/.docker/config.json step ---
 
     - name: Set up Cloud SDK
       uses: 'google-github-actions/setup-gcloud@v2'
+      # Note: setup-gcloud should still pick up ADC implicitly set by auth action for gcloud commands
 
-    - name: Configure Docker to use gcloud credential helper
-      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
-      
-    - name: Show Docker config.json
-      run: |
-        echo "--- Contents of ~/.docker/config.json ---"
-        # The 'cat' command will print the file content.
-        # The '|| true' part prevents the workflow from failing if the file doesn't exist yet (though it should after configure-docker).
-        cat ~/.docker/config.json || echo "config.json not found or empty. Configure-docker might have failed."
-        echo "-----------------------------------------"
-        
     - name: Build Docker image
       run: docker build -t ${{ env.IMAGE_PATH }}:${{ github.sha }} -t ${{ env.IMAGE_PATH }}:latest .
-      # Ensure your Dockerfile and dashboard.py are in the root or adjust path
 
     - name: Push Docker image to Artifact Registry
-      run: docker push ${{ env.IMAGE_PATH }} --all-tags # Pushes both sha and latest tags
+      # This push should now work because docker/login-action authenticated successfully
+      run: docker push ${{ env.IMAGE_PATH }} --all-tags
 
     - name: Deploy to Cloud Run
       id: deploy
@@ -62,16 +66,10 @@ jobs:
       with:
         service: ${{ env.CLOUD_RUN_SERVICE_NAME }}
         region: ${{ env.GCP_REGION }}
-        # Deploy the specific image tagged with the commit SHA
         image: ${{ env.IMAGE_PATH }}:${{ github.sha }}
-        # --- Optional Flags ---
-        # Allow public access (remove if you need authentication)
         flags: '--allow-unauthenticated'
-        # Example: Set environment variables for your Dash app if needed
-        # env_vars: |
-        #   DB_HOST=1.2.3.4
-        #   API_KEY=some_secret_value # (Better to use GCP Secret Manager for secrets)
+        # Note: deploy-cloudrun uses gcloud which should use ADC set by the auth action
 
     - name: Show Cloud Run Service URL
-      if: steps.deploy.outputs.url # Only run if deployment succeeded and URL is available
+      if: steps.deploy.outputs.url
       run: echo "Deployed successfully to:${{ steps.deploy.outputs.url }}"
