@@ -53,9 +53,6 @@ jobs:
       run: docker build -t ${{ env.IMAGE_PATH }}:${{ github.sha }} -t ${{ env.IMAGE_PATH }}:latest .
       # Ensure your Dockerfile and dashboard.py are in the root or adjust path
 
-    - name: Login to GCP
-      run: gcloud auth login
-
     - name: Push Docker image to Artifact Registry
       run: docker push ${{ env.IMAGE_PATH }} --all-tags # Pushes both sha and latest tags
 
