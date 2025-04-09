@@ -55,6 +55,13 @@ jobs:
     - name: Build Docker image
       run: docker build --no-cache -t ${{ env.IMAGE_PATH }}:${{ github.sha }} -t ${{ env.IMAGE_PATH }}:latest .
 
+        # Add this temporary debug step:
+    - name: List files in container /app directory
+      run: |
+        echo "--- Listing /app in built image ---"
+        docker run --rm ${{ env.IMAGE_PATH }}:${{ github.sha }} ls -l /app
+        echo "----------------------------------"
+
     # Step 5: Push the Docker image to Artifact Registry
     # This push uses the credentials established by the 'docker/login-action' step
     - name: Push Docker image to Artifact Registry
