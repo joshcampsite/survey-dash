@@ -28,5 +28,5 @@ ENV PORT=8080
 # Make sure 'app:server' points to your Dash app's underlying Flask server instance
 # Use 0.0.0.0 to bind to all network interfaces within the container
 # Use $PORT environment variable Cloud Run provides
-# Corrected line for your Dockerfile
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "dashboard:app.server"]
+# Correct "shell" form for variable expansion
+CMD gunicorn --bind 0.0.0.0:$PORT dashboard:app.server
