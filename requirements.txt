@@ -4,5 +4,5 @@ dash-bootstrap-components
 pandas
 plotly
 numpy
-gunicorn # Add gunicorn for production
-# Add any other libraries you import
+gunicorn # Keep gunicorn for now, or remove if waitress works
+waitress # Add this

@@ -1,7 +1,7 @@
 # Dockerfile
 
 # Use an official Python runtime as a parent image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Set the working directory in the container
 WORKDIR /app
@@ -29,4 +29,5 @@ ENV PORT=8080
 # Use 0.0.0.0 to bind to all network interfaces within the container
 # Use $PORT environment variable Cloud Run provides
 # Correct "shell" form for variable expansion
-CMD gunicorn --bind 0.0.0.0:$PORT dashboard:app.server
+# Use waitress instead of gunicorn
+CMD waitress-serve --host 0.0.0.0 --port=$PORT dashboard:server
