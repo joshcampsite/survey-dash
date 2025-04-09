@@ -13,6 +13,7 @@ import pandas.api.types as ptypes
 # --- Initialize the app with a Bootstrap theme ---
 # You can try other themes like dbc.themes.FLATLY, dbc.themes.LITERA, etc.
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+server = app.server
 
 # --- Define Column Names (Keep these updated) ---
 # (Column name definitions remain the same)

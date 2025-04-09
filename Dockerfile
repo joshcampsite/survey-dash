@@ -29,4 +29,4 @@ ENV PORT=8080
 # Use 0.0.0.0 to bind to all network interfaces within the container
 # Use $PORT environment variable Cloud Run provides
 # Correct "shell" form for variable expansion
-CMD gunicorn --bind 0.0.0.0:8080 dashboard:app
+CMD gunicorn --bind 0.0.0.0:$PORT dashboard:app.server
