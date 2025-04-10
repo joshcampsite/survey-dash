@@ -53,7 +53,7 @@ jobs:
 
     # Step 4: Build the Docker image
     - name: Build Docker image
-      run: docker build --no-cache -t ${{ env.IMAGE_PATH }}:${{ github.sha }} -t ${{ env.IMAGE_PATH }}:latest .
+      run: docker build -t ${{ env.IMAGE_PATH }}:${{ github.sha }} -t ${{ env.IMAGE_PATH }}:latest .
 
         # Add this temporary debug step:
     - name: List files in container /app directory
