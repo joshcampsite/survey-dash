@@ -1,0 +1,21 @@
+# Git specific files
+.git
+.gitignore
+
+# Node build artifacts and dependencies
+node_modules
+npm-debug.log
+dist
+
+# Environment files
+.env
+.env.*
+*.env
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Docker files (optional, sometimes excluded)
+# Dockerfile
+# .dockerignore

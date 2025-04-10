@@ -1,33 +1,61 @@
-# Dockerfile
-
-# Use an official Python runtime as a parent image
-FROM python:3.12-slim
+# ---- Stage 1: Build ----
+# Use an official Node.js LTS version as a parent image.
+# Alpine versions are smaller.
+FROM node:20-alpine AS builder
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container at /app
-COPY requirements.txt .
+# Copy package.json and package-lock.json (or yarn.lock)
+COPY package*.json ./
 
-# Install any needed packages specified in requirements.txt
-# Use --no-cache-dir to reduce image size
-RUN pip install --no-cache-dir -r requirements.txt
+# Install all dependencies (including devDependencies needed for build)
+# Using npm ci is generally recommended for CI/CD environments as it uses the lock file
+# and provides faster, more reliable builds.
+RUN npm ci
 
-# Copy the rest of the application code into the container at /app
+# Copy the rest of the application source code
 COPY . .
 
-# Make port 8080 available to the world outside this container
-# Cloud Run expects the container to listen on the port defined by the PORT env var ($PORT), defaulting to 8080
-EXPOSE 8080
+# Run the build script defined in package.json (compiles TS to JS)
+RUN npm run build
 
-# Define environment variable (optional, good practice)
-ENV PORT=8080
+# Remove development dependencies after build is complete
+# This step is optional if you copy node_modules selectively later,
+# but it ensures the node_modules copied in the next stage are clean.
+# RUN npm prune --production
 
-# Run app.py using gunicorn when the container launches
-# Make sure 'app' matches the variable name you assigned dash.Dash() to (app = dash.Dash(...))
-# Make sure 'app:server' points to your Dash app's underlying Flask server instance
-# Use 0.0.0.0 to bind to all network interfaces within the container
-# Use $PORT environment variable Cloud Run provides
-# Correct "shell" form for variable expansion
-# Use waitress instead of gunicorn
-CMD waitress-serve --host 0.0.0.0 --port=$PORT dashboard:server
+# ---- Stage 2: Production ----
+# Use a slim Node.js image for the final stage
+FROM node:20-alpine
+
+# Set the working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json again to ensure consistency
+# We'll use these to install *only* production dependencies
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Copy the built application code (dist folder) from the builder stage
+COPY --from=builder /app/dist ./dist
+
+# Copy production node_modules from the builder stage
+# This is an alternative to running `npm ci --only=production` in this stage,
+# especially if you ran `npm prune --production` in the builder stage.
+# Choose *one* method for node_modules: either `npm ci --only=production` here,
+# or uncomment the `npm prune` in builder and the COPY below.
+# COPY --from=builder /app/node_modules ./node_modules
+
+# The application listens on port 3000 by default
+EXPOSE 3000
+
+# Good practice: Run the application as a non-root user for security
+# The node base images include a 'node' user
+USER node
+
+# Define the command to run the application
+# This will execute `node dist/index.js`
+CMD ["node", "dist/index.js"]
