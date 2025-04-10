@@ -10,7 +10,8 @@ import {
 // Types
 
 export type DatabaseSchema = {
-  status: Status
+  status: Status,
+  post: Post,
   auth_session: AuthSession
   auth_state: AuthState
 }
@@ -19,6 +20,14 @@ export type Status = {
   uri: string
   authorDid: string
   status: string
+  createdAt: string
+  indexedAt: string
+}
+
+export type Post = {
+  uri: string
+  authorDid: string
+  content: string
   createdAt: string
   indexedAt: string
 }
@@ -58,6 +67,14 @@ migrations['001'] = {
       .addColumn('indexedAt', 'varchar', (col) => col.notNull())
       .execute()
     await db.schema
+      .createTable('post')
+      .addColumn('uri', 'varchar', (col) => col.primaryKey())
+      .addColumn('authorDid', 'varchar', (col) => col.notNull())
+      .addColumn('content', 'varchar', (col) => col.notNull())
+      .addColumn('createdAt', 'varchar', (col) => col.notNull())
+      .addColumn('indexedAt', 'varchar', (col) => col.notNull())
+      .execute()
+    await db.schema
       .createTable('auth_session')
       .addColumn('key', 'varchar', (col) => col.primaryKey())
       .addColumn('session', 'varchar', (col) => col.notNull())
@@ -72,6 +89,7 @@ migrations['001'] = {
     await db.schema.dropTable('auth_state').execute()
     await db.schema.dropTable('auth_session').execute()
     await db.schema.dropTable('status').execute()
+    await db.schema.dropTable('post').execute()
   },
 }
 
