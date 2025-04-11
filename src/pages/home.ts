@@ -1,4 +1,4 @@
-import type { Status } from '#/db'
+import type { Post, Status } from '#/db'
 import { html } from '../lib/view'
 import { shell } from './shell'
 
@@ -35,7 +35,8 @@ const STATUS_OPTIONS = [
 ]
 
 type Props = {
-  statuses: Status[]
+  statuses: Status[],
+  posts: Post[],
   didHandleMap: Record<string, string>
   profile?: { displayName?: string }
   myStatus?: Status
@@ -48,12 +49,12 @@ export function home(props: Props) {
   })
 }
 
-function content({ statuses, didHandleMap, profile, myStatus }: Props) {
+function content({ statuses, didHandleMap, profile, myStatus, posts }: Props) {
   return html`<div id="root">
     <div class="error"></div>
     <div id="header">
-      <h1>Statusphere</h1>
-      <p>Set your status on the Atmosphere.</p>
+      <h1>Statusphere x Campsite</h1>
+      <p>Set your status and make text posts on the Atmosphere.</p>
     </div>
     <div class="container">
       <div class="card">
@@ -74,6 +75,25 @@ function content({ statuses, didHandleMap, profile, myStatus }: Props) {
               </div>
             </div>`}
       </div>
+      ${profile || true
+        ? html`<form action="/post" method="post" class="text-post-form">
+            <div class="form-group">
+              <label for="postContent">What's on your mind?</label>
+              <textarea
+                id="postContent"
+                name="postContent"
+                rows="3"
+                required
+                minlength="1"
+                maxlength="128"
+                placeholder="Enter your post (1-128 characters)"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <button type="submit">Post to Campsite</button>
+            </div>
+          </form>`
+        : ''}
       <form action="/status" method="post" class="status-options">
         ${STATUS_OPTIONS.map(
           (status) =>
@@ -105,6 +125,27 @@ function content({ statuses, didHandleMap, profile, myStatus }: Props) {
           </div>
         `
       })}
+      ${posts.map((post, i) => {
+        const handle = didHandleMap[post.authorDid] || post.authorDid
+        const date = tp(post)
+        return html`
+          <div class=${i === 0 ? 'status-line no-line' : 'status-line'}>
+            <div>
+              <div class="text-wrap">${post.content}</div>
+            </div>
+            <br>
+            <div class="desc">
+              <a class="author" href=${toBskyLink(handle)}>@${handle}</a>
+            </div>
+            <br>
+            <div>
+              ${date === TODAY
+                ? `Today`
+                : `${date}`}
+            </div>
+          </div>
+        `
+      })}
     </div>
   </div>`
 }
@@ -116,6 +157,13 @@ function toBskyLink(did: string) {
 function ts(status: Status) {
   const createdAt = new Date(status.createdAt)
   const indexedAt = new Date(status.indexedAt)
+  if (createdAt < indexedAt) return createdAt.toDateString()
+  return indexedAt.toDateString()
+}
+
+function tp(post: Post) {
+  const createdAt = new Date(post.createdAt)
+  const indexedAt = new Date(post.indexedAt)
   if (createdAt < indexedAt) return createdAt.toDateString()
   return indexedAt.toDateString()
 }

@@ -1,7 +1,13 @@
 /**
  * GENERATED CODE - DO NOT MODIFY
  */
-import { LexiconDoc, Lexicons } from '@atproto/lexicon'
+import {
+  type LexiconDoc,
+  Lexicons,
+  ValidationError,
+  type ValidationResult,
+} from '@atproto/lexicon'
+import { type $Typed, is$typed, maybe$typed } from './util.js'
 
 export const schemaDict = {
   ComAtprotoLabelDefs: {
@@ -183,6 +189,31 @@ export const schemaDict = {
       },
     },
   },
+  SocialCampsitePost: {
+    lexicon: 1,
+    id: 'social.campsite.post',
+    defs: {
+      main: {
+        type: 'record',
+        key: 'tid',
+        record: {
+          type: 'object',
+          required: ['content', 'createdAt'],
+          properties: {
+            content: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 128,
+            },
+            createdAt: {
+              type: 'string',
+              format: 'datetime',
+            },
+          },
+        },
+      },
+    },
+  },
   AppBskyActorProfile: {
     lexicon: 1,
     id: 'app.bsky.actor.profile',
@@ -285,12 +316,42 @@ export const schemaDict = {
       },
     },
   },
-}
-export const schemas: LexiconDoc[] = Object.values(schemaDict) as LexiconDoc[]
+} as const satisfies Record<string, LexiconDoc>
+export const schemas = Object.values(schemaDict) satisfies LexiconDoc[]
 export const lexicons: Lexicons = new Lexicons(schemas)
+
+export function validate<T extends { $type: string }>(
+  v: unknown,
+  id: string,
+  hash: string,
+  requiredType: true,
+): ValidationResult
+export function validate<T extends { $type?: string }>(
+  v: unknown,
+  id: string,
+  hash: string,
+  requiredType?: false,
+): ValidationResult
+export function validate(
+  v: unknown,
+  id: string,
+  hash: string,
+  requiredType?: boolean,
+): ValidationResult {
+  return (requiredType ? is$typed : maybe$typed)(v, id, hash)
+    ? lexicons.validate(`${id}#${hash}`, v)
+    : {
+        success: false,
+        error: new ValidationError(
+          `Must be an object with "${hash === 'main' ? id : `${id}#${hash}`}" $type property`,
+        ),
+      }
+}
+
 export const ids = {
   ComAtprotoLabelDefs: 'com.atproto.label.defs',
+  SocialCampsitePost: 'social.campsite.post',
   AppBskyActorProfile: 'app.bsky.actor.profile',
   XyzStatusphereStatus: 'xyz.statusphere.status',
   ComAtprotoRepoStrongRef: 'com.atproto.repo.strongRef',
-}
+} as const

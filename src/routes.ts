@@ -13,6 +13,7 @@ import { login } from '#/pages/login'
 import { env } from '#/lib/env'
 import { page } from '#/lib/view'
 import * as Status from '#/lexicon/types/xyz/statusphere/status'
+import * as Post from '#/lexicon/types/social/campsite/post'
 import * as Profile from '#/lexicon/types/app/bsky/actor/profile'
 
 type Session = { did: string }
@@ -156,6 +157,12 @@ export const createRouter = (ctx: AppContext) => {
         .orderBy('indexedAt', 'desc')
         .limit(10)
         .execute()
+      const posts = await ctx.db
+        .selectFrom('post')
+        .selectAll()
+        .orderBy('indexedAt', 'desc')
+        .limit(10)
+        .execute()
       const myStatus = agent
         ? await ctx.db
             .selectFrom('status')
@@ -167,12 +174,12 @@ export const createRouter = (ctx: AppContext) => {
 
       // Map user DIDs to their domain-name handles
       const didHandleMap = await ctx.resolver.resolveDidsToHandles(
-        statuses.map((s) => s.authorDid)
+        [...new Set([...statuses.map((s) => s.authorDid), ...posts.map((p) => p.authorDid)])],
       )
 
       if (!agent) {
         // Serve the logged-out view
-        return res.type('html').send(page(home({ statuses, didHandleMap })))
+        return res.type('html').send(page(home({ statuses, didHandleMap, posts })))
       }
 
       // Fetch additional information about the logged-in user
@@ -195,6 +202,7 @@ export const createRouter = (ctx: AppContext) => {
         page(
           home({
             statuses,
+            posts,
             didHandleMap,
             profile,
             myStatus,
@@ -261,6 +269,78 @@ export const createRouter = (ctx: AppContext) => {
             uri,
             authorDid: agent.assertDid,
             status: record.status,
+            createdAt: record.createdAt,
+            indexedAt: new Date().toISOString(),
+          })
+          .execute()
+      } catch (err) {
+        ctx.logger.warn(
+          { err },
+          'failed to update computed view; ignoring as it should be caught by the firehose'
+        )
+      }
+
+      return res.redirect('/')
+    })
+  )
+
+  // "Set post" handler
+  router.post(
+    '/post',
+    handler(async (req, res) => {
+      // If the user is signed in, get an agent which communicates with their server
+      const agent = await getSessionAgent(req, res, ctx)
+      if (!agent) {
+        return res
+          .status(401)
+          .type('html')
+          .send('<h1>Error: Session required</h1>')
+      }
+
+      // Construct & validate their post record
+      const rkey = TID.nextStr()
+      const record = {
+        $type: 'social.campsite.post',
+        content: req.body?.postContent,
+        createdAt: new Date().toISOString(),
+      }
+      if (!Post.validateRecord(record).success) {
+        return res
+          .status(400)
+          .type('html')
+          .send('<h1>Error: Invalid post</h1>')
+      }
+
+      let uri
+      try {
+        // Write the post record to the user's repository
+        const res = await agent.com.atproto.repo.putRecord({
+          repo: agent.assertDid,
+          collection: 'social.campsite.post',
+          rkey,
+          record,
+          validate: false,
+        })
+        uri = res.data.uri
+      } catch (err) {
+        ctx.logger.warn({ err }, 'failed to write record')
+        return res
+          .status(500)
+          .type('html')
+          .send('<h1>Error: Failed to write record</h1>')
+      }
+
+      try {
+        // Optimistically update our SQLite
+        // This isn't strictly necessary because the write event will be
+        // handled in #/firehose/ingestor.ts, but it ensures that future reads
+        // will be up-to-date after this method finishes.
+        await ctx.db
+          .insertInto('post')
+          .values({
+            uri,
+            authorDid: agent.assertDid,
+            content: record.content,
             createdAt: record.createdAt,
             indexedAt: new Date().toISOString(),
           })

@@ -210,3 +210,50 @@ button:hover, .button:hover {
   text-wrap: balance;
   margin-top: 1rem;
 }
+
+.text-wrap {
+  white-space: pre-wrap; /* Preserve whitespace and wrap normally */
+  word-break: break-word; /* Force line breaks within words if they are too long */
+}
+
+.text-post-form {
+  display: flex;
+  flex-direction: column; /* Stack items vertically */
+  gap: 10px; /* Add some spacing between the elements */
+  width: 100%; /* Adjust as needed */
+  max-width: 600px; /* Optional: set a maximum width for the form */
+}
+
+.form-group {
+  margin-bottom: 10px; /* Add spacing below each group (label, input/textarea, button) */
+  width: 100%; /* Make form groups take full width of the form */
+}
+
+.form-group label {
+  display: block; /* Make the label take its own line */
+  margin-bottom: 5px; /* Add some space below the label */
+  font-weight: bold; /* Optional: make the label text bold */
+}
+
+.form-group textarea {
+  width: 100%; /* Make the textarea take full width */
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Ensure padding and border are included in the element's total width and height */
+  resize: none; /* Prevent resizing of the textarea */
+}
+
+.form-group button[type="submit"] {
+  padding: 10px 15px;
+  background-color: #007bff; /* Example button color */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.form-group button[type="submit"]:hover {
+  background-color: #0056b3; /* Darker shade on hover */
+}

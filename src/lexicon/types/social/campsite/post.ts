@@ -8,11 +8,11 @@ import { type $Typed, is$typed as _is$typed, type OmitKey } from '../../../util'
 
 const is$typed = _is$typed,
   validate = _validate
-const id = 'xyz.statusphere.status'
+const id = 'social.campsite.post'
 
 export interface Record {
-  $type: 'xyz.statusphere.status'
-  status: string
+  $type: 'social.campsite.post'
+  content: string
   createdAt: string
   [k: string]: unknown
 }
